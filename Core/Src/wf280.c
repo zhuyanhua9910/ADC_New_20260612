@@ -33,7 +33,9 @@
 #define WF280_OUTPUT_2V_SETTLE_MS 200
 #define WF280_M1_SETTLE_MS 20
 #define WF280_CURRENT_CHANNEL 0x01
-#define WF280_CURRENT_SHUNT_OHM 120
+/* 板上实测分流电阻 30 Ω（2026-11-13 复核，原按 120 Ω 记）。改这里即可，
+   短路预检处的换算也统一引用本宏，不要再写死字面量。 */
+#define WF280_CURRENT_SHUNT_OHM 30
 #define WF280_ADC_FULL_SCALE 8388608
 #define WF280_SHORT_CURRENT_UA 20000
 
@@ -158,9 +160,9 @@ static uint32_t wf280_current_magnitude(uint32_t raw)
     return (uint32_t)((value < 0) ? -value : value);
 }
 
-/* 电流换算：采样电阻 120 Ω，ADS1220 用 PGA 旁路、AVDD 做基准，所以满量程
-   对应 rail_mv / 120 Ω。按 μA 返回，超过 65535 饱和（对应 65 mA，远高于
-   20 mA 的短路阈值，不影响判定）。 */
+/* 电流换算：采样电阻 30 Ω，ADS1220 用 PGA 旁路、AVDD 做基准，所以满量程
+   对应 rail_mv / 30 Ω（1.8V 档 60mA、3.3V 档 110mA）。按 μA 返回，超过
+   65535 饱和（对应 65 mA，仍高于 20 mA 的短路阈值，不影响判定）。 */
 static uint16_t wf280_current_ua(uint32_t raw, uint16_t rail_mv)
 {
     uint64_t current_ua;
@@ -508,14 +510,14 @@ void AllTestFor280(uint16_t *out, uint16_t out_lens)
     rail_1v8_mv = WF280ReadRailMv();
 
     // 1.2 短路预检：照 WF183 的写法，上电延时到点读一次电流判阈值。
-    //     两处必须跟着 1.8V 改：①这颗板电流通道是反的，读数为负，先取绝对值；
-    //     ②1.8V 满量程只有 15mA，
-    //     183 的 3.3V/0.02A 照抄过来永远够不到，阈值按比例取 0.02A。
+    //     两点要注意：①这颗板电流通道是反的，读数为负，先取绝对值；
+    //     ②满量程按 rail/30Ω 算，1.8V 档 60mA，20mA 阈值能正常触发。
+    //     阈值沿用 183 的 0.02A，不随电阻改动。
     //     命中就和 183 一样把原始码按字节拆开交上去（183 放 out[110..113]，
     //     这里放 [3..6]：正常帧它们是工作/休眠电流，短路时这 4 个寄存器
     //     就是原始码的 4 个字节），然后断电返回。
     work_code = wf280_read_current();
-    curr = (float)wf280_current_magnitude(work_code) / 8388608.0f * 1.8f / 120.0f;
+    curr = (float)wf280_current_magnitude(work_code) / 8388608.0f * 1.8f / 30.0f;
     if (curr >= 0.02f) {
         out[WF280_R_STATUS]       = WF280_STATUS_SHORT;      /* 0xE1 */
         out[WF280_R_WORK_RAW]     = (uint8_t)(work_code);

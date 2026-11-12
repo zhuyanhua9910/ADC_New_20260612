@@ -112,7 +112,7 @@ def rail_in_level(mv: int, level: int) -> bool:
 
 # 与固件 wf280.c 同一套常数
 ADC_FULL_SCALE = 8388608        # WF280_ADC_FULL_SCALE，24 位满量程
-CURRENT_SHUNT_OHM = 120         # WF280_CURRENT_SHUNT_OHM
+CURRENT_SHUNT_OHM = 30          # WF280_CURRENT_SHUNT_OHM（板上实测分流电阻）
 
 
 def signed24(raw: int) -> int:

@@ -45,7 +45,7 @@ void AllTestFor183(uint16_t *out, uint16_t out_lens){
     do {
         //short dect
         ADC_Value_183 = GET_ADS1220_Val(&ADS1220);
-        curr = (float)ADC_Value_183/8388608.0f * 3.3f / 120.0f;
+        curr = (float)ADC_Value_183/8388608.0f * 3.3f / 30.0f;
         if(curr>=0.02) {
             _out[0] = (uint8_t)(ADC_Value_183);
             _out[1] = (uint8_t)(ADC_Value_183>>8);

@@ -272,7 +272,7 @@ def _():
     assert signed24(0xFFFD29AE & 0xFFFFFF) == -185938
     assert signed24(0x00000017) == 23
     ua = raw_to_ua(WORK_RAW, 3296)
-    assert 605 < ua < 612, ua          # 约 608.8 uA
+    assert 2430 < ua < 2440, ua       # 约 2435.2 uA（分流 30 Ω）
     assert raw_to_ua(WORK_RAW, 0) == 0    # 没轨压不换算
 
 
@@ -299,8 +299,8 @@ def _():
     assert result.sleep_raw == SLEEP_RAW
     assert result.work_code == -185938
     assert result.sleep_code == -1999
-    assert 605 < result.work_ua < 612
-    assert 6.5 < result.sleep_ua < 6.6, result.sleep_ua
+    assert 2430 < result.work_ua < 2440
+    assert 26.1 < result.sleep_ua < 26.3, result.sleep_ua
     assert result.raw == [0x00, 0x2A, 0xBC, 0xDF, 0x12, 0x34]
     assert result.chip_status == 0x00
     assert result.bridge_code == 0x2ABCD
