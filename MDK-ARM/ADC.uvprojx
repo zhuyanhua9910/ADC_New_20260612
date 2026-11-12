@@ -421,11 +421,6 @@
               <FilePath>..\Core\Src\wf162a.c</FilePath>
             </File>
             <File>
-              <FileName>jh1400f_driver.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Core\Src\jh1400f_driver.c</FilePath>
-            </File>
-            <File>
               <FileName>wf183.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Core\Src\wf183.c</FilePath>
