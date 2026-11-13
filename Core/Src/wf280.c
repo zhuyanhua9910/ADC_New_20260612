@@ -33,8 +33,7 @@
 #define WF280_OUTPUT_2V_SETTLE_MS 200
 #define WF280_M1_SETTLE_MS 20
 #define WF280_CURRENT_CHANNEL 0x01
-/* 板上实测分流电阻 30 Ω（2026-11-13 复核，原按 120 Ω 记）。改这里即可，
-   短路预检处的换算也统一引用本宏，不要再写死字面量。 */
+
 #define WF280_CURRENT_SHUNT_OHM 30
 #define WF280_ADC_FULL_SCALE 8388608
 #define WF280_SHORT_CURRENT_UA 20000
@@ -52,7 +51,7 @@
 
 /* */
 #define WF280_TEST_MEASUREMENT 0x0000
-#define WF280_TEST_MEASURE_MS 100
+#define WF280_TEST_MEASURE_MS 150//150
 #define WF280_TEST_COEFF_COUNT 32   /* 每个 bank 全量读 32 路 */
 #define WF280_TEST_COEFF_HEAD 2     /* 前 2 路额外写进兼容区 20..23 */
 #define WF280_TEST_COEFF_DELAY_MS 5
@@ -490,7 +489,7 @@ void AllTestFor280(uint16_t *out, uint16_t out_lens)
     uint16_t nor;                        // NOR 系数
     uint8_t nor_mismatch = 0;            // 不一致的路号，0=全部一致
     uint8_t i;                           // 原始数据循环变量
-    
+    uint8_t s;                           // 0xAC 连测次数循环
 
     // 先清除缓存区，防止数据残留
     memset(out, 0, out_lens * sizeof(*out));
@@ -502,23 +501,17 @@ void AllTestFor280(uint16_t *out, uint16_t out_lens)
     //    M1 bank（0x80~0x9F）在 M1/1.8V 模式下读；
     //    用 DAC 输出 1.8V 代替。等 300ms 让 DUT 电源稳定。
     MCP4725_WriteData_Voltage(WF280_SUPPLY_1V8_MV);
-    // 等待电压稳定
-    osDelay(300);                         
-
-    // 1.1 1.8V 稳定后先回读实际轨压，占结果帧 [1]。
-    //     只做测量，不动供电，也不影响后面 I2C 读 M1。
-    rail_1v8_mv = WF280ReadRailMv();
-
-    // 1.2 短路预检：照 WF183 的写法，上电延时到点读一次电流判阈值。
+		
+		 // 1.2 短路预检：照 WF183 的写法，上电延时到点读一次电流判阈值。
     //     两点要注意：①这颗板电流通道是反的，读数为负，先取绝对值；
     //     ②满量程按 rail/30Ω 算，1.8V 档 60mA，20mA 阈值能正常触发。
-    //     阈值沿用 183 的 0.02A，不随电阻改动。
+    //     阈值沿用 183 的 0.01A，不随电阻改动。
     //     命中就和 183 一样把原始码按字节拆开交上去（183 放 out[110..113]，
     //     这里放 [3..6]：正常帧它们是工作/休眠电流，短路时这 4 个寄存器
     //     就是原始码的 4 个字节），然后断电返回。
     work_code = wf280_read_current();
     curr = (float)wf280_current_magnitude(work_code) / 8388608.0f * 1.8f / 30.0f;
-    if (curr >= 0.02f) {
+    if (curr >= 0.01f) {
         out[WF280_R_STATUS]       = WF280_STATUS_SHORT;      /* 0xE1 */
         out[WF280_R_WORK_RAW]     = (uint8_t)(work_code);
         out[WF280_R_WORK_RAW + 1] = (uint8_t)(work_code >> 8);
@@ -528,6 +521,14 @@ void AllTestFor280(uint16_t *out, uint16_t out_lens)
         wf280_power_off();
         return;
     }
+    // 等待电压稳定
+    osDelay(300);                         
+
+    // 1.1 1.8V 稳定后先回读实际轨压，占结果帧 [1]。
+    //     只做测量，不动供电，也不影响后面 I2C 读 M1。
+    rail_1v8_mv = WF280ReadRailMv();
+
+
 
     // 2、读 M1 系数（0x80~0x9F，32 路）。
     //    先 0xBA 复位（等 10ms）；复位后再给 50ms 启动时间，然后逐路读。
@@ -611,27 +612,35 @@ void AllTestFor280(uint16_t *out, uint16_t out_lens)
     // 6.1 复位后发 0xAC 测量命令。
     //     工作电流必须在测量进行中抓，等测量结束芯片就进低功耗了。
     //     参数按大端拆成两个字节；测量约 100ms，然后轮询 NOR 空闲。
-    wf280_open(&bus);
+	
+		wf280_open(&bus);
     status = wf280_set_cmd(&bus, WF280_CMD_RESET, NULL, 0, 0, 10);
     if (status == WF280_STATUS_OK) {
         osDelay(50);
         params[0] = (uint8_t)(WF280_TEST_MEASUREMENT >> 8);
         params[1] = (uint8_t)WF280_TEST_MEASUREMENT;
-        status = wf280_write(&bus, WF280_CMD_BT_MEAS, params, 2);
     }
-    if (status == WF280_STATUS_OK) {
-        work_code = wf280_read_current();
-        out[WF280_R_WORK_RAW]     = (uint16_t)(work_code & 0xFFFF);        // 结果帧 [3..4] 工作电流原始码
-        out[WF280_R_WORK_RAW + 1] = (uint16_t)(work_code >> 16);
+    for (s = 0; s < WF280_RAW_SAMPLES && status == WF280_STATUS_OK; s++) {
+        status = wf280_write(&bus, WF280_CMD_BT_MEAS, params, 2);
+        if (status != WF280_STATUS_OK) break;
+
+        if (s == 0) {
+            work_code = wf280_read_current();
+            out[WF280_R_WORK_RAW]     = (uint16_t)(work_code & 0xFFFF);    // 结果帧 [3..4] 工作电流原始码
+            out[WF280_R_WORK_RAW + 1] = (uint16_t)(work_code >> 16);
+        }
 
         osDelay(WF280_TEST_MEASURE_MS);
         status = wf280_wait_idle(&bus, 0, 2, WF280_RETRY_COUNT);
-    }
+        if (status != WF280_STATUS_OK) break;
 
-    // 6.2 测量完成后一次读 6 字节原始数据：
-    //     [0]=Status，[1..5]=电桥 20 位 + 温度 20 位。
-    if (status == WF280_STATUS_OK)
+        // 6.2 每次测量完读 6 字节：[0]=Status，[1..5]=电桥 20 位 + 温度 20 位。
         status = wf280_read(&bus, data, WF280_R_RAW_LEN);
+        if (status != WF280_STATUS_OK) break;
+
+        for (i = 0; i < WF280_R_RAW_LEN; ++i)
+            out[WF280_R_RAW + s * WF280_R_RAW_LEN + i] = data[i];
+    }
     wf280_close(&bus);
 
     // 6.3 任一环节失败：整个结果帧清 0，只写首字错误码，

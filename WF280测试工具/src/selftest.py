@@ -3,7 +3,7 @@
 
 逐条验证 WF280 的全部命令：
     Modbus 帧的 CRC / 功能码 / 寄存器地址（40000 写、30000 读）
-    cmd 0x14 的异步队列流程（触发 → 轮询 IsTaskDone → 取 77 个寄存器）
+    cmd 0x14 的异步队列流程（触发 → 轮询 IsTaskDone → 取 89 个寄存器）
     新结果帧的解码：状态、1.8 V / 3.3 V 两档实测轨压、工作/休眠电流原始码与解析值、
     0xAC 的 6 字节原始数据、M1 / NOR 两个 bank 的 32 路系数
     0x211 轨压、11 OTP、0x208/0x210 输出测试、0x209 系数、0x207 M1、0x201 设压
@@ -26,6 +26,7 @@ from wf280_proto import (
     R_RAIL_MV,
     R_RAW,
     R_RAW_LEN,
+    R_RAW_SAMPLES,
     R_SLEEP_RAW,
     R_STATUS,
     R_WORK_RAW,
@@ -107,7 +108,9 @@ class FakeFirmwareSerial:
         regs[R_SLEEP_RAW + 1] = (SLEEP_RAW >> 16) & 0xFFFF
         # 0xAC 六字节原始数据：d0=芯片 Status，
         # 按手册 4.3 打包：电桥 0x2ABCD（正）、温度 0xF1234（负，-0xEDCC）
-        regs[R_RAW:R_RAW + R_RAW_LEN] = [0x00, 0x2A, 0xBC, 0xDF, 0x12, 0x34]
+        sample = [0x00, 0x2A, 0xBC, 0xDF, 0x12, 0x34]
+        for s in range(R_RAW_SAMPLES):
+            regs[R_RAW + s * R_RAW_LEN:R_RAW + (s + 1) * R_RAW_LEN] = sample
         for i in range(COEFF_MAX):
             regs[R_M1 + i] = 0x1000 + i
             regs[R_NOR + i] = 0x1000 + i
@@ -161,7 +164,7 @@ class FakeFirmwareSerial:
             self.send_buf[0] = 1                # 固件先回 1，结果要等 0x401
             self.done_regs = None
             if self.instant:
-                # 立刻测完：IsTaskDone 马上是 0，0x401 返回完整 77 个字
+                # 立刻测完：IsTaskDone 马上是 0，0x401 返回完整 89 个字
                 self.busy = False
                 self.done_regs = self._results()
             else:
@@ -276,7 +279,7 @@ def _():
     assert raw_to_ua(WORK_RAW, 0) == 0    # 没轨压不换算
 
 
-@case("结果帧：77 个寄存器按固件偏移解码")
+@case("结果帧：89 个寄存器按固件偏移解码")
 def _():
     regs = [0] * RESULT_LENGTH
     regs[R_STATUS] = 0
@@ -339,8 +342,10 @@ def _():
     assert names[5] == "工作电流（解析）", names
     assert names[6] == "休眠电流原始码", names
     assert names[7] == "休眠电流（解析）", names
-    assert names[8] == "0xAC 原始数据（6 字节）", names
-    assert names[-1] == "M1 / NOR 系数", names
+    assert names[8] == "第 1 次 0xAC 原始数据", names
+    assert names[9] == "第 2 次 0xAC 原始数据", names
+    assert names[10] == "第 3 次 0xAC 原始数据", names
+    assert names[11] == "M1 / NOR 系数", names
 
     by_name = {row[0]: row for row in rows}
     assert by_name["测量整体"][1] == "PASS"
@@ -350,7 +355,7 @@ def _():
     assert "0xFFFD29AE" in by_name["工作电流原始码"][1]
     assert by_name["工作电流（解析）"][1].endswith("uA")
     assert by_name["工作电流（解析）"][2] == "OK"
-    assert by_name["0xAC 原始数据（6 字节）"][1] == "00 2A BC DF 12 34"
+    assert by_name["第 1 次 0xAC 原始数据"][1] == "00 2A BC DF 12 34"
     assert "32 路全部一致" in by_name["M1 / NOR 系数"][1]
 
 
@@ -468,7 +473,7 @@ def _():
     assert status_text(0xE2) == "轨压异常"
 
 
-@case("0x14 整套测试：异步流程与 77 字结果解码")
+@case("0x14 整套测试：异步流程与 89 字结果解码")
 def _():
     fake, tester = make_tester(rail_mv=3298)
     ticks: list[float] = []

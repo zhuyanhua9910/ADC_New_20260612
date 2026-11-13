@@ -13,17 +13,20 @@
 /* AllTestFor280 (cmd = 14) 的结果帧：77 个输入寄存器，首字固定为状态，
    后面是真实数据，最后追加 M1/NOR 两 bank 的 32 路原始值。
    两档轨压各自在切压稳定后、读系数之前测：1.8 V 占 [1]，3.3 V 占 [2]。 */
-#define WF280_TEST_RESULT_LENGTH 77
+#define WF280_TEST_RESULT_LENGTH 89
 
 #define WF280_R_STATUS      0   /* 状态：0=OK，非 0=错误码 */
 #define WF280_R_RAIL_1V8_MV 1   /* 1.8 V 实测轨压 mV（读 M1 之前测） */
 #define WF280_R_RAIL_MV     2   /* 3.3 V 实测轨压 mV（读 NOR 之前测） */
 #define WF280_R_WORK_RAW    3   /* 工作电流原始码，低 16 位在前 */
 #define WF280_R_SLEEP_RAW   5   /* 休眠电流原始码，低 16 位在前 */
-#define WF280_R_RAW         7   /* 0xAC 读出的 6 字节原始数据，1 字节 1 寄存器 */
+#define WF280_R_RAW         7   /* 3 次 0xAC 原始数据连续放：每次 6 字节 */
 #define WF280_R_RAW_LEN     6
-#define WF280_R_M1         13   /* M1 bank 32 路系数原始值 */
-#define WF280_R_NOR        45   /* NOR bank 32 路系数原始值 */
+#define WF280_RAW_SAMPLES   3
+#define WF280_R_M1         25   /* M1 bank 32 路系数原始值 */
+#define WF280_R_NOR        57   /* NOR bank 32 路系数原始值 */
+
+
 
 
 /* The WF280 adapter keeps the command/status convention used by the
