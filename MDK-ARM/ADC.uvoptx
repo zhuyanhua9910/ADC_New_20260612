@@ -138,7 +138,7 @@
         <SetRegEntry>
           <Number>0</Number>
           <Key>DLGUARM</Key>
-          <Name>(105=-1,-1,-1,-1,0)</Name>
+          <Name>/</Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -160,34 +160,34 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>154</LineNumber>
+          <LineNumber>503</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>0</Address>
-          <ByteObject>0</ByteObject>
-          <HtxType>0</HtxType>
-          <ManyObjects>0</ManyObjects>
-          <SizeOfObject>0</SizeOfObject>
-          <BreakByAccess>0</BreakByAccess>
-          <BreakIfRCount>0</BreakIfRCount>
-          <Filename>../Core/Src/main.c</Filename>
-          <ExecCommand></ExecCommand>
-          <Expression></Expression>
-        </Bp>
-        <Bp>
-          <Number>1</Number>
-          <Type>0</Type>
-          <LineNumber>154</LineNumber>
-          <EnabledFlag>1</EnabledFlag>
-          <Address>134236362</Address>
+          <Address>134221444</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>E:\宸ョ▼\MODE_ADC\ADC_New_20260612\Core\Src\main.c</Filename>
+          <Filename>..\Core\Src\wf280.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\ADC\../Core/Src/main.c\154</Expression>
+          <Expression>\\ADC\../Core/Src/wf280.c\503</Expression>
+        </Bp>
+        <Bp>
+          <Number>1</Number>
+          <Type>0</Type>
+          <LineNumber>635</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134221916</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>..\Core\Src\wf280.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\ADC\../Core/Src/wf280.c\635</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
