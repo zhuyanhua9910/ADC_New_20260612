@@ -42,7 +42,7 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
-#define SLAVE_ADDRESS 1
+#define SLAVE_ADDRESS   16
 
 /* USER CODE END PTD */
 

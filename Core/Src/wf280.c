@@ -563,9 +563,8 @@ void AllTestFor280(uint16_t *out, uint16_t out_lens)
     // 3、切 3.3V。
     //    NOR bank（0x00~0x1F）在正常 3.3V 模式下访问，等 100ms 稳定。
     MCP4725_WriteData_Voltage(WF280_SUPPLY_3V3_MV);
-		sleep_code = wf280_read_min_current();
-    out[WF280_R_SLEEP_RAW]     = (uint16_t)(sleep_code & 0xFFFF);              // 结果帧 [5..6] 休眠电流原始码
-    out[WF280_R_SLEEP_RAW + 1] = (uint16_t)(sleep_code >> 16);
+		
+
 //		ADS1220_Init(&ADS1220);
     // 等待电压稳定
     //osDelay(5);
@@ -573,7 +572,8 @@ void AllTestFor280(uint16_t *out, uint16_t out_lens)
     // 3.1 3.3V 稳定后先回读实际轨压，占结果帧 [2]。
     //     同样只做测量，读 NOR 之前拿到真实电压。
     rail_mv = WF280ReadRailMv();
-
+	
+		
     // 4、读 NOR（0x00~0x1F），读一路比一路。
     //    复位后参考工程只等 10ms，这里给 50ms 余量，只影响速度不影响结果。
     //    每路 3 字节，取 [1..2] 当 16 位系数；先存 nor_coeff，再和 m1_coeff 比。
@@ -663,10 +663,17 @@ void AllTestFor280(uint16_t *out, uint16_t out_lens)
     
     out[WF280_R_STATUS] = 0;                    // 0=成功
 
-    // 6.4 等 10ms 让 DUT 进入休眠，再读休眠电流原始码。
+    // 6.4 等 100ms 让 DUT 进入休眠，再读休眠电流原始码。
     //     读电流的函数内部连读两次取较小值，避开刚进休眠的过渡态。
-    
-
+    osDelay(100);
+	
+		for (k = 0; k < 3; ++k) 
+		{
+      sleep_code = wf280_read_min_current();
+        //osDelay(2);        
+    }
+    out[WF280_R_SLEEP_RAW]     = (uint16_t)(sleep_code & 0xFFFF);              // 结果帧 [5..6] 休眠电流原始码
+    out[WF280_R_SLEEP_RAW + 1] = (uint16_t)(sleep_code >> 16);
 
     // 6.5 把两档轨压和 M1/NOR 两个 bank 的 32 路原始值追加到帧尾，
     //     上位机可以直接核对每一路，不用再单独发 0x207/0x209。
